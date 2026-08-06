@@ -1,3 +1,6 @@
+# iam.tf
+# EC2의 AWS Systems Manager 접근을 위한 IAM 리소스 정의
+
 resource "aws_iam_role" "ssm" {
   name = "${var.project_name}-ssm-role"
 

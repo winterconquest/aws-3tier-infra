@@ -124,3 +124,19 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+# ============================================
+# CloudWatch
+# ============================================
+
+variable "alert_email" {
+  description = "CloudWatch Endpoint E-mail"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_free_storage_threshold_ratio" {
+  description = "여유 공간 임계 비율 (기본 20%)"
+  type        = number
+  default     = 0.2
+}
