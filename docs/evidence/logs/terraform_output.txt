@@ -1,0 +1,16 @@
+alb_dns_name = "aws-3tier-alb-1354551763.ap-northeast-2.elb.amazonaws.com"
+app_subnets_ids = [
+  "subnet-03d2a80f570fe8192",
+  "subnet-006702bec2a674bf6",
+]
+cloudfront_url = "https://d16br1c4wynzzu.cloudfront.net"
+db_subnets_ids = [
+  "subnet-0f10690ad02733abd",
+  "subnet-04e7a4ed85995192a",
+]
+public_subnets_ids = [
+  "subnet-0c89b474aa105faa2",
+  "subnet-0782d4733f887508d",
+]
+rds_endpoint = <sensitive>
+vpc_id = "vpc-05037711ece387ba6"

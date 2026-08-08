@@ -1,0 +1,53 @@
+[0m[1mdata.aws_ssm_parameter.al2023: Reading...[0m[0m
+[0m[1maws_eip.nat[0]: Refreshing state... [id=eipalloc-044eecb0ac24e2ce4][0m
+[0m[1maws_eip.nat[1]: Refreshing state... [id=eipalloc-0b514089638662704][0m
+[0m[1maws_iam_role.ssm: Refreshing state... [id=aws-3tier-ssm-role][0m
+[0m[1maws_sns_topic.alerts: Refreshing state... [id=arn:aws:sns:ap-northeast-2:703440311746:aws-3tier-alerts][0m
+[0m[1maws_vpc.main: Refreshing state... [id=vpc-05037711ece387ba6][0m
+[0m[1maws_sns_topic_subscription.email: Refreshing state... [id=arn:aws:sns:ap-northeast-2:703440311746:aws-3tier-alerts:ebbacd72-516c-451e-8eb4-1e6568727283][0m
+[0m[1mdata.aws_ssm_parameter.al2023: Read complete after 0s [id=/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64][0m
+[0m[1maws_security_group.ec2: Refreshing state... [id=sg-01a2e1a92e8e3efba][0m
+[0m[1maws_security_group.rds: Refreshing state... [id=sg-074f79bb815e2181c][0m
+[0m[1maws_subnet.app[1]: Refreshing state... [id=subnet-006702bec2a674bf6][0m
+[0m[1maws_subnet.db[1]: Refreshing state... [id=subnet-04e7a4ed85995192a][0m
+[0m[1maws_subnet.db[0]: Refreshing state... [id=subnet-0f10690ad02733abd][0m
+[0m[1maws_subnet.public[0]: Refreshing state... [id=subnet-0c89b474aa105faa2][0m
+[0m[1maws_subnet.app[0]: Refreshing state... [id=subnet-03d2a80f570fe8192][0m
+[0m[1maws_security_group.alb: Refreshing state... [id=sg-0f150ab2784dae5d6][0m
+[0m[1maws_lb_target_group.app: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-northeast-2:703440311746:targetgroup/aws-3tier-tg-app/a6746942afe26464][0m
+[0m[1maws_subnet.public[1]: Refreshing state... [id=subnet-0782d4733f887508d][0m
+[0m[1maws_internet_gateway.main: Refreshing state... [id=igw-0223a114946865a43][0m
+[0m[1maws_vpc_security_group_egress_rule.ec2_all: Refreshing state... [id=sgr-0df29909d0522a171][0m
+[0m[1maws_vpc_security_group_ingress_rule.rds_from_ec2: Refreshing state... [id=sgr-0f3ffdf57ba169d1d][0m
+[0m[1maws_vpc_security_group_ingress_rule.alb_http: Refreshing state... [id=sgr-06c4baee5988ab034][0m
+[0m[1maws_vpc_security_group_ingress_rule.ec2_from_alb: Refreshing state... [id=sgr-09fbf7f971cc83c59][0m
+[0m[1maws_vpc_security_group_egress_rule.alb_all: Refreshing state... [id=sgr-08db11d0ff9d1dcb8][0m
+[0m[1maws_route_table.public: Refreshing state... [id=rtb-03c193d179f94098c][0m
+[0m[1maws_db_subnet_group.main: Refreshing state... [id=aws-3tier-db-subnet-group][0m
+[0m[1maws_nat_gateway.main[0]: Refreshing state... [id=nat-0703e95f84939624c][0m
+[0m[1maws_nat_gateway.main[1]: Refreshing state... [id=nat-0ae7bf7d2f610850e][0m
+[0m[1maws_lb.main: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-northeast-2:703440311746:loadbalancer/app/aws-3tier-alb/11cde6891dcd8e16][0m
+[0m[1maws_route_table_association.public[1]: Refreshing state... [id=rtbassoc-00d1b4a54fb012423][0m
+[0m[1maws_route_table_association.public[0]: Refreshing state... [id=rtbassoc-00a14c828a73ffb25][0m
+[0m[1maws_route_table.private[0]: Refreshing state... [id=rtb-0460f90064747cd98][0m
+[0m[1maws_route_table.private[1]: Refreshing state... [id=rtb-02e8875d278d16866][0m
+[0m[1maws_route_table_association.db[1]: Refreshing state... [id=rtbassoc-048cf98b2c90c6abd][0m
+[0m[1maws_route_table_association.app[0]: Refreshing state... [id=rtbassoc-0f45b71e86227bfed][0m
+[0m[1maws_route_table_association.db[0]: Refreshing state... [id=rtbassoc-01bd73dd9a89241e8][0m
+[0m[1maws_route_table_association.app[1]: Refreshing state... [id=rtbassoc-06317eb8f54b3e0a1][0m
+[0m[1maws_cloudwatch_metric_alarm.alb_unhealthy: Refreshing state... [id=aws-3tier-alb-unhealthy][0m
+[0m[1maws_cloudwatch_metric_alarm.alb_healthy: Refreshing state... [id=aws-3tier-alb-healthy][0m
+[0m[1maws_lb_listener.http: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-northeast-2:703440311746:listener/app/aws-3tier-alb/11cde6891dcd8e16/a28166827891b5e1][0m
+[0m[1maws_cloudfront_distribution.main: Refreshing state... [id=E1OOXM72FBYVRK][0m
+[0m[1maws_db_instance.main: Refreshing state... [id=db-SPVDPRQSA2LLYXWNX6KF52ZKDE][0m
+[0m[1maws_cloudwatch_metric_alarm.rds_freestorage: Refreshing state... [id=aws-3tier-rds-freestorage][0m
+[0m[1maws_iam_role_policy_attachment.ssm_core: Refreshing state... [id=aws-3tier-ssm-role-20260807121214277700000001][0m
+[0m[1maws_iam_instance_profile.ssm: Refreshing state... [id=aws-3tier-ssm-profile][0m
+[0m[1maws_launch_template.app: Refreshing state... [id=lt-01d260e7ca8c5f349][0m
+[0m[1maws_autoscaling_group.app: Refreshing state... [id=aws-3tier-asg][0m
+[0m[1maws_cloudwatch_dashboard.main: Refreshing state... [id=aws-3tier-dashboard][0m
+
+[0m[1m[32mNo changes.[0m[1m Your infrastructure matches the configuration.[0m
+
+[0mTerraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
