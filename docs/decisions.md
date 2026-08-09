@@ -23,6 +23,11 @@
 - [treat_missing_data를 지표별로 다르게 설정](#treat_missing_data를-지표별로-다르게-설정)
 - [지표 선택 오류와 재설계](#지표-선택-오류와-재설계)
 
+**CI/CD**
+- [부트스트랩 구성 분리](#부트스트랩-구성-분리)
+- [OIDC 인증과 sub 클레임 형식](#oidc-인증과-sub-클레임-형식)
+- [plan 자동, apply 승인](#plan-자동-apply-승인)
+
 **그 외 결정 요약** → [표로 이동](#그-외-결정-요약)
 
 ---
@@ -377,6 +382,22 @@ sudo systemctl stop httpd
   DB 연결 실패처럼 앱은 떠 있으나 기능하지 못하는 상태는 감지되지 않는다.
   실제 의존성을 점검하는 health check 엔드포인트를 두면 이 범위가 넓어진다.
 
+### OIDC 인증과 sub 클레임 형식
+
+액세스 키 대신 OIDC를 선택한 이유는 저장되는 장기 자격증명이 없기 때문이다.
+신뢰 정책에서 `sub` 클레임으로 리포지토리와 이벤트를 제한한다.
+
+구성 중 `Not authorized to perform sts:AssumeRoleWithWebIdentity`로 막혔는데,
+대부분의 레퍼런스가 안내하는 `repo:owner/name:event` 형식이 맞지 않았다.
+실제 토큰을 디코딩해 확인한 결과, 2026년 7월 15일 이후 생성된 리포지토리는
+조직·리포지토리의 영구 숫자 ID가 포함된 형식을 발급하고 있었다.
+
+숫자 ID를 와일드카드로 대체하면 정책이 단순해지지만, 이름 재사용을 막는다는
+이 변경의 취지가 사라지므로 명시적으로 지정했다.
+
+**남은 원칙** — 레퍼런스대로 했는데 동작하지 않으면 문서를 더 찾기 전에
+실제 값을 확인한다. 스펙이 바뀌었을 때 추측으로는 좁혀지지 않는다.
+
 ---
 
 ## 그 외 결정 요약
@@ -389,7 +410,7 @@ sudo systemctl stop httpd
 | trust policy 작성 | `jsonencode()` 인라인 | 정책 JSON 구조를 코드에 직접 노출. 정책이 늘면 `aws_iam_policy_document`로 전환 |
 | 코드 구조 | 리소스 타입별 플랫 파일, 모듈 미사용 | 단일 환경에서는 모듈화 이득이 작음. 환경 분리 시 재검토 |
 | lock 파일 | `.terraform.lock.hcl` 커밋, state·tfvars 제외 | provider 버전 고정은 재현성 요건, 나머지는 민감 정보 포함 |
-| state 관리 | 로컬 파일 | 단독 작업 기준. CI/CD 도입과 함께 S3 backend + DynamoDB lock으로 전환 |
+| 배포 역할 | plan과 apply가 동일 역할 사용 | plan은 읽기 전용 역할로 분리 |
 | 알람 임계값 | 하드코딩 대신 변수 기반 계산식 | 스토리지 크기 변경 시 비율이 자동 유지 |
 | ASG health check | `health_check_type = ELB` | 인스턴스는 살아있고 앱만 죽은 상황도 교체 대상에 포함 |
 | ASG 그룹 지표 | `enabled_metrics` 명시 | 기본 비활성이라 자가치유 관측이 불가능 |
@@ -397,4 +418,8 @@ sudo systemctl stop httpd
 | 대시보드 EC2 위젯 | SEARCH 표현식 | 인스턴스 교체 시 ID 하드코딩은 유지 불가. 종료 인스턴스 잔존은 한계 |
 | RDS Multi-AZ | 유지 | 페일오버 동작 검증이 목적. 개발 환경이라면 Single-AZ |
 | 리포팅 | CloudWatch 대시보드 + `describe-alarm-history` | 대시보드는 알람 이력 집계 불가. 정기 리포팅에는 Grafana 등 별도 도구 필요 |
+| state 잠금 | S3 네이티브 잠금 (`use_lockfile`) | Terraform 1.11+에서 DynamoDB 테이블 없이 잠금 가능 |
+| OIDC thumbprint | 생략 | AWS가 GitHub OIDC를 신뢰 CA로 검증. Optional/Computed라 한번 설정하면 제거 불가 |
+| 배포 역할 권한 | 서비스 단위 고객 관리형 정책 | AdministratorAccess 대비 범위 축소. IAM은 개별 액션만 나열 |
+| 워크플로 관리 | 리포지토리 내 파일로 커밋 | 파이프라인 설정도 코드로. 웹 UI 설정은 이력이 남지 않음 |
 

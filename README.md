@@ -2,6 +2,9 @@
 
 AWS에 Multi-AZ 고가용성 웹 인프라를 Terraform으로 구축하고, 장애 복구와 모니터링 동작을 실측 검증한 프로젝트다.
 
+![Terraform Plan](https://github.com/winterconquest/aws-3tier-infra/actions/workflows/terraform-plan.yaml/badge.svg)
+![Terraform Apply](https://github.com/winterconquest/aws-3tier-infra/actions/workflows/terraform-apply.yaml/badge.svg)
+
 ## 배경
 
 시스템 운영 업무를 4년간 수행하며 모니터링 도구로 이벤트를 확인하고 보고하는 역할을 맡았다.
@@ -37,6 +40,7 @@ AWS에 Multi-AZ 고가용성 웹 인프라를 Terraform으로 구축하고, 장�
 
 구축한 인프라가 의도대로 동작하는지 항목별로 검증했다. 각 항목의 원본 캡처와 로그는
 [`docs/evidence/`](docs/evidence/)에 있다.
+여러 차례 apply/destroy를 반복하며 검증했으므로 캡처 간 리소스 ID가 다를 수 있다.
 
 ### 인프라 구성
 
@@ -103,12 +107,25 @@ Terraform으로 관리한다.
 | 검증 항목 | 기대 | 결과 |
 |---|---|---|
 | DB 엔드포인트 DNS 해석 | 프라이빗 IP | `10.0.22.234` |
-| 인터넷 → RDS 3306 | 차단 | TCP 연결 실패, ICMP 타임아웃 |
-| App 서브넷 → RDS 3306 | 허용 | MySQL 8.0.46 접속 성공 |
-| ALB → App 인스턴스 | 허용 | HTTP 200 |
+| 인터넷 → RDS 3306 | 차단 | TCP 연결 실패 |
+| 인터넷 → App 인스턴스 | 차단 | timeout (5초) |
+| App → App 인스턴스 직접 접근 | 차단 | timeout (5초) |
+| App → ALB 경유 | 허용 | HTTP 200 |
+| App 서브넷 → RDS 3306 | 허용 | MySQL 8.0.46 접속 |
 
 <details>
 <summary>상세 보기</summary>
+
+**계층 간 직접 통신 차단** — 같은 인스턴스에서 실행한 두 요청이 갈렸다.
+
+![계층 간 통신 차단](docs/evidence/images/demo_capture/12_negative_3.png)
+
+다른 App 인스턴스(`10.0.11.198`)로의 직접 접근은 타임아웃되고, ALB를 경유한 동일
+서비스 요청은 200을 반환한다. EC2 보안 그룹의 ingress를 CIDR이 아니라 ALB 보안 그룹
+참조로 지정했기 때문이며, 서브넷 CIDR 기반 규칙이었다면 두 요청 모두 통과했을 것이다.
+
+첫 줄은 로컬 PC에서 App 인스턴스(`10.0.12.108`)로 시도한 결과다. 프라이빗 서브넷에
+위치해 인터넷에서 도달할 경로가 없다.
 
 **인터넷에서 DB 접근 차단** — 로컬 PC(192.168.219.101)에서 DB 엔드포인트로 시도한 결과
 
@@ -298,11 +315,109 @@ threshold = var.db_allocated_storage * local.gib * var.db_free_storage_threshold
 
 </details>
 
+## CI/CD
+
+Terraform 코드 변경을 PR 단위로 검증하고, 승인을 거쳐 배포하는 파이프라인을
+GitHub Actions로 구성했다.
+
+```
+PR 생성 → fmt / validate / plan 자동 실행 → 결과를 PR 코멘트로 게시
+   ↓ (리뷰 후 머지)
+main push → 승인 대기 → 승인 → apply
+```
+
+| 항목 | 구성 |
+|---|---|
+| 인증 | GitHub OIDC (액세스 키 미사용) |
+| state | S3 원격 backend, 네이티브 잠금 |
+| plan | PR 이벤트에서 자동 실행, 결과를 코멘트로 게시 |
+| apply | main 머지 시 트리거, GitHub Environment 승인 게이트 통과 후 실행 |
+| 권한 | 배포 전용 IAM 역할, 필요한 서비스로 범위 제한 |
+
+<details>
+<summary>상세 보기</summary>
+
+### 인증 — 장기 자격증명 제거
+
+액세스 키를 GitHub Secrets에 저장하는 대신 OIDC를 사용한다. GitHub이 워크플로 실행마다
+서명된 토큰을 발급하고, AWS가 이를 검증해 1시간짜리 임시 자격증명을 내주는 구조다.
+저장되는 비밀이 없으므로 유출 시 무기한 악용되는 위험과 수동 로테이션 부담이 사라진다.
+
+IAM 역할의 신뢰 정책은 토큰의 `sub` 클레임을 검증해 **특정 리포지토리의 특정 이벤트**로
+사용 범위를 제한한다.
+
+| 허용 대상 | 용도 |
+|---|---|
+| `...:pull_request` | plan 실행 |
+| `...:environment:production` | apply 실행 |
+
+와일드카드를 사용하지 않고 정확히 일치하는 값만 허용한다. 브랜치 전체를 여는 형태
+(`repo:owner/name:*`)를 쓰면 feature 브랜치 push만으로도 배포 권한을 얻게 되어
+승인 게이트가 무의미해진다.
+
+### 승인 게이트
+
+apply 잡은 GitHub Environment `production`을 참조한다. 이 환경에는 필수 리뷰어가
+지정되어 있어, 잡이 시작되기 전 승인을 요구하고 그때까지 대기한다.
+
+![승인 대기](docs/evidence/images/cicd_capture/01_approval_pending.png)
+![승인 다이얼로그](docs/evidence/images/cicd_capture/02_approval_dialog.png)
+
+승인 후 배포가 진행된다.
+
+![apply 실행](docs/evidence/images/cicd_capture/03_apply_success.png)
+
+이 구조가 중요한 이유는 **GitHub 승인 절차와 AWS 권한이 연결**되기 때문이다.
+승인을 통과해야만 `sub`에 `environment:production`이 담긴 토큰이 발급되므로,
+승인 없이는 배포용 자격증명 자체를 얻을 수 없다. 워크플로 파일을 수정해
+게이트를 우회하려 해도 IAM 신뢰 정책에서 거부된다.
+
+### PR 검증
+
+![PR plan 코멘트](docs/evidence/images/cicd_capture/04_pr_plan_comment.png)
+
+fmt / validate / plan 결과를 표로 요약하고, plan 상세는 접힌 블록에 넣어
+필요한 사람만 펼쳐 보도록 했다. plan이 실패해도 코멘트를 먼저 게시한 뒤
+잡을 실패시키므로, 원인을 로그에서 찾을 필요가 없다.
+
+### 배포 역할 권한
+
+`AdministratorAccess` 대신 이 프로젝트가 사용하는 서비스로 범위를 좁힌 고객 관리형
+정책을 작성했다.
+
+| Statement | 범위 |
+|---|---|
+| 인프라 관리 | EC2 / ELB / ASG / RDS / CloudFront / CloudWatch / SNS / SSM + IAM 개별 액션 |
+| PassRole | `iam:PassedToService = ec2.amazonaws.com` 조건부 |
+| state 접근 | state 버킷 ARN으로 한정 |
+
+`iam:*`를 부여하면 역할이 자기 자신에게 관리자 권한을 붙일 수 있으므로, 필요한
+IAM 액션만 나열했다. `iam:PassRole`은 별도 Statement로 분리해 EC2로 전달하는
+경우만 허용한다.
+
+정책이 충분한지는 실제 apply를 반복하며 확인했다. 부족한 권한은 실행 시
+`AccessDenied`와 함께 액션 이름이 드러난다. 이 과정에서 IAM이 리소스 생성과
+태그 부여를 별도 액션으로 취급한다는 점을 확인했다
+(`iam:CreateInstanceProfile`과 `iam:TagInstanceProfile`이 각각 필요).
+
+### 부트스트랩 분리
+
+state 버킷과 OIDC 관련 리소스는 `terraform/`이 아니라 `bootstrap/`에 둔다.
+파이프라인이 `terraform/`을 실행하는데 그 실행에 필요한 역할이 같은 구성 안에
+있으면 순환 의존이 생기고, `destroy` 시 파이프라인 자체가 사라진다.
+
+| 구성 | 수명 | state |
+|---|---|---|
+| `bootstrap/` | 영구 | 로컬 (의도된 예외) |
+| `terraform/` | 검증 시에만 생성 | S3 원격 backend |
+
+</details>
+
 ## 기술 스택
 
 - **IaC**: Terraform
 - **Cloud**: AWS (VPC, EC2, ALB, RDS, CloudFront, NAT Gateway, CloudWatch, SNS, SSM, IAM)
-- **CI/CD**: (예정)
+- **CI/CD**: GitHub Actions (OIDC 인증, PR 검증 + 승인 기반 배포)
 
 ## 파일 구조
 
@@ -311,6 +426,15 @@ threshold = var.db_allocated_storage * local.gib * var.db_free_storage_threshold
 ├── README.md
 ├── architecture.png
 ├── .gitignore
+├── .github/
+│   └── workflows/
+│       ├── terraform-plan.yaml   # PR 검증
+│       └── terraform-apply.yaml  # 승인 후 배포
+├── bootstrap/                    # state 버킷, OIDC (영구 리소스)
+│   ├── main.tf
+│   ├── oidc.tf
+│   ├── variables.tf
+│   └── outputs.tf
 ├── docs/
 │   ├── decisions.md              # 설계 결정 근거
 │   └── evidence/                 # 검증 자료
@@ -339,16 +463,33 @@ threshold = var.db_allocated_storage * local.gib * var.db_free_storage_threshold
 ## 실행 방법
 
 **사전 요구사항**
-- Terraform 1.x, AWS CLI v2
+- Terraform 1.11 이상 (S3 backend 네이티브 잠금 사용), AWS CLI v2
 - 알람 수신용 이메일 주소
 
+**1. 부트스트랩** — state 버킷 생성
+
 ```bash
-cd terraform
-cp terraform.tfvars.example terraform.tfvars   # alert_email 등 값 입력
+cd bootstrap
+terraform init
+terraform apply
+```
+
+**2. backend 설정** — `terraform/backend.tf`의 버킷 이름을 1단계 출력값으로 변경
+
+**3. 인프라 배포**
+
+```bash
+cd ../terraform
+cp terraform.tfvars.example terraform.tfvars   # 값 입력
 terraform init
 terraform plan
 terraform apply
 ```
+
+`apply` 후 SNS 구독 확인 메일의 링크를 클릭해야 알람이 발송된다.
+
+> CI/CD를 함께 사용하려면 `bootstrap/`의 OIDC 리소스도 필요하다. 신뢰 정책의
+> `sub` 값을 본인 리포지토리에 맞게 수정해야 한다.
 
 `apply` 후 SNS 구독 확인 메일의 링크를 클릭해야 알람이 발송된다.
 
@@ -397,7 +538,7 @@ S3 버킷이 남아 있던 것으로, **`terraform destroy`가 계정 전체의 
 
 | 항목 | 현재 | 개선 방향 |
 |---|---|---|
-| Terraform state | 로컬 파일 | S3 backend + DynamoDB lock (CI/CD 구축과 함께 진행) |
+| 배포 역할 | plan과 apply가 동일 역할 사용 | plan은 읽기 전용 역할로 분리 |
 | 코드 구조 | 리소스 타입별 단일 파일 | 환경 분리 시 모듈화 및 workspace 도입 |
 | HTTPS | ALB는 HTTP만 수신 | ACM 인증서 발급 후 리스너 추가, HTTP→HTTPS 리다이렉트 |
 | IAM 정책 | AWS 관리형 정책(`AmazonSSMManagedInstanceCore`) 사용 | 고객 관리형 정책으로 필요 권한만 축소 |
@@ -407,6 +548,7 @@ S3 버킷이 남아 있던 것으로, **`terraform destroy`가 계정 전체의 
 | 페일오버 대응 | 클라이언트 타임아웃 미조정 | 커넥션 풀 소켓 타임아웃 및 유효성 검사 설정 |
 | DB 엔진 버전 | MySQL 8.0 (Extended Support 편입) | 지원 기간이 남은 버전으로 전환, 비용의 57% 절감 가능 |
 | DB 자격증명 | tfvars 파일로 주입 | Secrets Manager 또는 RDS 관리형 마스터 암호로 전환 |
+| App 계층 | user_data 기반 정적 페이지 | 실 애플리케이션 배포 시 ECS/EKS 전환 검토 |
 
 ## 주요 설계 결정
 
@@ -420,4 +562,5 @@ S3 버킷이 남아 있던 것으로, **`terraform destroy`가 계정 전체의 
 - **재해 복구**: Cross-Region Replication
 - **보안**: WAF 규칙, Secrets Manager 통합
 - **관측성**: X-Ray 트레이싱
-- **CI/CD**: GitHub Actions → ECR → EC2 자동 배포 (다음 단계)
+- **애플리케이션 배포**: 현재는 user_data로 정적 페이지 구성. 컨테이너화 후
+  ECR → ECS/EC2 배포 파이프라인 추가
