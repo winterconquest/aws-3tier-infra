@@ -42,7 +42,7 @@ AWS에 Multi-AZ 고가용성 웹 인프라를 Terraform으로 구축하고, 장�
 
 | 검증 항목 | 결과 |
 |---|---|
-| 리소스 생성 | 47개 리소스 생성 완료 |
+| 리소스 생성 | 46개 리소스 생성 완료 (data source 1개 별도) |
 | 멱등성 | apply 직후 `terraform plan` → `No changes` |
 | Multi-AZ 배치 | 서브넷 6개가 2개 AZ에 분산 (Public/App/DB × 2) |
 | NAT 이중화 | AZ별 독립 NAT Gateway, 서로 다른 EIP 할당 |
