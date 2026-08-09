@@ -74,7 +74,6 @@ resource "aws_iam_policy" "github_actions" {
         Action   = "iam:PassRole"
         Resource = [
             "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-ssm-role",
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${var.project_name}-ssm-profile",
         ]
         Condition = {
           StringEquals = {
