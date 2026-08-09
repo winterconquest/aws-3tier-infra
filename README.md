@@ -562,5 +562,3 @@ S3 버킷이 남아 있던 것으로, **`terraform destroy`가 계정 전체의 
 - **재해 복구**: Cross-Region Replication
 - **보안**: WAF 규칙, Secrets Manager 통합
 - **관측성**: X-Ray 트레이싱
-- **애플리케이션 배포**: 현재는 user_data로 정적 페이지 구성. 컨테이너화 후
-  ECR → ECS/EC2 배포 파이프라인 추가
