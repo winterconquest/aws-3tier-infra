@@ -8,10 +8,6 @@ on:
       - 'terraform/**'
       - '.github/workflows/**'
   workflow_dispatch:
-    inputs:
-      confirm:
-        description: '확인을 위해 destroy 입력'
-        required: true
 
 permissions:
   id-token: write
