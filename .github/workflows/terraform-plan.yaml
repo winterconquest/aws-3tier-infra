@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'terraform/**'
-      - '.github/workflows/terraform-plan.yml'
+      - '.github/workflows/**'
 
 permissions:
   id-token: write      # OIDC 토큰 요청에 필수

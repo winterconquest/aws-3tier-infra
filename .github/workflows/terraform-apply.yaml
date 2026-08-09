@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'terraform/**'
-      - '.github/workflows/terraform-apply.yml'
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       confirm:
