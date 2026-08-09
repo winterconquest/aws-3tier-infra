@@ -49,23 +49,33 @@ resource "aws_iam_policy" "github_actions" {
           "cloudwatch:*",
           "sns:*",
           "ssm:*",
-          "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:TagRole",
-          "iam:TagInstanceProfile", "iam:UntagInstanceProfile", "iam:UntagRole",
-          "iam:ListInstanceProfileTags", "iam:ListRoleTags",
-          "iam:AttachRolePolicy", "iam:DetachRolePolicy", "iam:ListAttachedRolePolicies",
-          "iam:CreateInstanceProfile", "iam:DeleteInstanceProfile", "iam:GetInstanceProfile",
-          "iam:ListInstanceProfiles", "iam:GetRolePolicy",
-          "iam:AddRoleToInstanceProfile", "iam:RemoveRoleFromInstanceProfile",
-          "iam:ListRolePolicies", "iam:ListInstanceProfilesForRole"
-          # ... 나머지
         ]
         Resource = "*"
       },
       {
+        Sid    = "SsmRoleManagement"
+        Effect = "Allow"
+        Action = [
+            "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:TagRole", "iam:UntagRole",
+            "iam:AttachRolePolicy", "iam:DetachRolePolicy", "iam:ListAttachedRolePolicies",
+            "iam:ListRolePolicies", "iam:ListRoleTags", "iam:ListInstanceProfilesForRole",
+            "iam:CreateInstanceProfile", "iam:DeleteInstanceProfile", "iam:GetInstanceProfile",
+            "iam:AddRoleToInstanceProfile", "iam:RemoveRoleFromInstanceProfile",
+            "iam:TagInstanceProfile", "iam:UntagInstanceProfile", "iam:ListInstanceProfileTags",
+        ]
+        Resource = [
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-ssm-role",
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${var.project_name}-ssm-profile",
+        ]
+        },
+      {
         Sid      = "PassRoleToEC2"
         Effect   = "Allow"
         Action   = "iam:PassRole"
-        Resource = "*"
+        Resource = [
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-ssm-role",
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${var.project_name}-ssm-profile",
+        ]
         Condition = {
           StringEquals = {
             "iam:PassedToService" = "ec2.amazonaws.com"
