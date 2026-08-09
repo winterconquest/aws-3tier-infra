@@ -3,7 +3,6 @@
 AWS에 Multi-AZ 고가용성 웹 인프라를 Terraform으로 구축하고, 장애 복구와 모니터링 동작을 실측 검증한 프로젝트다.
 
 ![Terraform Plan](https://github.com/winterconquest/aws-3tier-infra/actions/workflows/terraform-plan.yaml/badge.svg)
-![Terraform Apply](https://github.com/winterconquest/aws-3tier-infra/actions/workflows/terraform-apply.yaml/badge.svg)
 
 ## 배경
 
