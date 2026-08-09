@@ -399,6 +399,10 @@ IAM 액션만 나열했다. `iam:PassRole`은 별도 Statement로 분리해 EC2�
 태그 부여를 별도 액션으로 취급한다는 점을 확인했다
 (`iam:CreateInstanceProfile`과 `iam:TagInstanceProfile`이 각각 필요).
 
+다만 apply 성공만으로는 권한이 최소인지 알 수 없다. 실제 호출된 액션을
+CloudTrail로 역추적해야 확인 가능하며, 현재 정책에는 사용되지 않은 액션이
+포함되어 있을 수 있다.
+
 ### 부트스트랩 분리
 
 state 버킷과 OIDC 관련 리소스는 `terraform/`이 아니라 `bootstrap/`에 둔다.
