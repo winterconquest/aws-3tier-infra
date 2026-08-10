@@ -1,6 +1,7 @@
 
 #provider, data.aws_caller_identity
 #state 버킷 3종
+
 terraform {
   required_version = ">= 1.11"
   required_providers {
